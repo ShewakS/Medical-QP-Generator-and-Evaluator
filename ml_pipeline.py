@@ -21,8 +21,8 @@ from sklearn.model_selection import train_test_split, cross_val_score, GridSearc
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.decomposition import PCA
-from sklearn.ensemble import RandomForestClassifier, StackingClassifier, VotingClassifier, ExtraTreesClassifier, GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression, RidgeClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.pipeline import Pipeline
@@ -35,12 +35,8 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
 
-# Visualization
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+# Visualization (minimal for confusion matrix only)
+from sklearn.metrics import confusion_matrix
 
 # Performance
 from joblib import Parallel, delayed
@@ -713,19 +709,9 @@ class OptimizedMLPipeline:
         
         # Stacked ensemble removed - Voting ensemble already achieved target (83.0%)
         
-        # Target achieved with Voting Ensemble! Skip Ultra Ensemble for now
-        if self.verbose:
-            if voting_accuracy >= 0.80:
-                print(f"\n🎉 TARGET ACHIEVED! Voting Ensemble: {voting_accuracy:.4f} >= 0.80")
-                print(f"   Skipping Ultra Ensemble as target is already met!")
-        
-        # Create placeholder for Ultra Ensemble (not needed since target achieved)
-        results['Ultra Ensemble'] = {
-            'model': voting_classifier,  # Use voting classifier as placeholder
-            'accuracy': voting_accuracy,  # Same as voting
-            'train_time': 0.0,
-            'predictions': y_pred_voting
-        }
+        # Target achieved with Voting Ensemble!
+        if self.verbose and voting_accuracy >= 0.80:
+            print(f"\n🎉 TARGET ACHIEVED! Voting Ensemble: {voting_accuracy:.4f} >= 0.80")
         
         self.models = {name: result['model'] for name, result in results.items()}
         self.results = results
@@ -755,66 +741,9 @@ class OptimizedMLPipeline:
             print("📊 STEP 10: Evaluation & Visualization")
             print("="*50)
         
-        # Create evaluation plots
-        fig = make_subplots(
-            rows=2, cols=2,
-            subplot_titles=('Model Accuracy Comparison', 'Training Time Comparison',
-                          'Confusion Matrix (Best Model)', 'Feature Importance'),
-            specs=[[{"type": "bar"}, {"type": "bar"}],
-                   [{"type": "heatmap"}, {"type": "bar"}]]
-        )
-        
-        # Model accuracy comparison
-        model_names = list(self.results.keys())
-        accuracies = [self.results[name]['accuracy'] for name in model_names]
-        train_times = [self.results[name]['train_time'] for name in model_names]
-        
-        fig.add_trace(
-            go.Bar(x=model_names, y=accuracies, name='Accuracy', marker_color='lightblue'),
-            row=1, col=1
-        )
-        
-        fig.add_trace(
-            go.Bar(x=model_names, y=train_times, name='Training Time (s)', marker_color='lightcoral'),
-            row=1, col=2
-        )
-        
-        # Use voting ensemble for confusion matrix (best performing model)
+        # Simple evaluation (no complex plotting)
         best_model_name = 'Voting Ensemble'
         best_predictions = self.results[best_model_name]['predictions']
-        
-        cm = confusion_matrix(y_val, best_predictions)
-        
-        fig.add_trace(
-            go.Heatmap(z=cm, colorscale='Blues', showscale=False),
-            row=2, col=1
-        )
-        
-        # Feature importance from Random Forest (base model in stacking)
-        rf_model = self.models['Random Forest']
-        if hasattr(rf_model, 'feature_importances_'):
-            # Get top 10 features from Random Forest
-            feature_names = [f'PC_{i+1}' for i in range(len(rf_model.feature_importances_))]
-            importances = rf_model.feature_importances_
-            
-            # Sort and get top 10
-            top_indices = np.argsort(importances)[-10:]
-            top_features = [feature_names[i] for i in top_indices]
-            top_importances = importances[top_indices]
-            
-            fig.add_trace(
-                go.Bar(x=top_importances, y=top_features, orientation='h', 
-                      name='RF Feature Importance', marker_color='lightgreen'),
-                row=2, col=2
-            )
-        
-        fig.update_layout(
-            title_text="ML Pipeline Results Dashboard",
-            showlegend=False,
-            height=800
-        )
-        
-        # Dashboard generation removed as requested
         
         if self.verbose:
             print("✅ Evaluation completed")
@@ -862,20 +791,8 @@ class OptimizedMLPipeline:
         with open(preprocessing_file, 'wb') as f:
             pickle.dump(preprocessing_components, f)
         
-        # Save complete pipeline results
-        pipeline_results = {
-            'results': self.results,
-            'models': self.models,
-            'preprocessing': preprocessing_components
-        }
-        
-        complete_pipeline_file = models_dir / 'complete_pipeline.pkl'
-        with open(complete_pipeline_file, 'wb') as f:
-            pickle.dump(pipeline_results, f)
-        
         if self.verbose:
             print(f"   ✅ Saved: Preprocessing Components -> {preprocessing_file.name}")
-            print(f"   ✅ Saved: Complete Pipeline -> {complete_pipeline_file.name}")
             print(f"   📁 All models saved in: {models_dir}")
             print(f"   📊 Total files saved: {len(list(models_dir.glob('*.pkl')))}")
     
