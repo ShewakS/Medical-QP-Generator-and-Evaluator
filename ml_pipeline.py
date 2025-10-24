@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-"""
-Optimized ML Pipeline for Medical Question Classification
-Follows the 10-step process with performance optimizations
-"""
-
 import pandas as pd
 import numpy as np
 import time
@@ -46,9 +40,6 @@ from tqdm import tqdm
 warnings.filterwarnings('ignore')
 
 class OptimizedMLPipeline:
-    """
-    High-performance ML pipeline for medical question classification
-    """
     
     def __init__(self, data_dir: str = ".", n_jobs: int = -1, verbose: bool = True):
         self.data_dir = Path(data_dir)
@@ -71,7 +62,7 @@ class OptimizedMLPipeline:
         self.stop_words = set(stopwords.words('english'))
         
         if self.verbose:
-            print(f"🚀 Pipeline initialized with {self.n_jobs} CPU cores")
+            print(f" Pipeline initialized with {self.n_jobs} CPU cores")
     
     def _download_nltk_data(self):
         """Download required NLTK data"""
@@ -80,7 +71,7 @@ class OptimizedMLPipeline:
             nltk.data.find('corpora/stopwords')
         except LookupError:
             if self.verbose:
-                print("📥 Downloading NLTK data...")
+                print(" Downloading NLTK data...")
             nltk.download('punkt', quiet=True)
             nltk.download('stopwords', quiet=True)
     
@@ -88,7 +79,7 @@ class OptimizedMLPipeline:
         """Log current memory usage"""
         if self.verbose:
             memory = psutil.virtual_memory()
-            print(f"💾 {step}: {memory.percent:.1f}% memory used ({memory.used/1024**3:.1f}GB)")
+            print(f" {step}: {memory.percent:.1f}% memory used ({memory.used/1024**3:.1f}GB)")
     
     def load_datasets(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
@@ -96,7 +87,7 @@ class OptimizedMLPipeline:
         """
         if self.verbose:
             print("\n" + "="*50)
-            print("📊 STEP 1-2: Loading Datasets")
+            print(" STEP 1-2: Loading Datasets")
             print("="*50)
         
         start_time = time.time()
@@ -123,11 +114,11 @@ class OptimizedMLPipeline:
         load_time = time.time() - start_time
         
         if self.verbose:
-            print(f"✅ Loaded datasets in {load_time:.2f}s")
-            print(f"   📈 Train: {len(train_df):,} samples")
-            print(f"   🧪 Test: {len(test_df):,} samples") 
-            print(f"   ✔️  Validation: {len(val_df):,} samples")
-            print(f"   📊 Total: {len(train_df) + len(test_df) + len(val_df):,} samples")
+            print(f" Loaded datasets in {load_time:.2f}s")
+            print(f" Train: {len(train_df):,} samples")
+            print(f" Test: {len(test_df):,} samples") 
+            print(f" Validation: {len(val_df):,} samples")
+            print(f" Total: {len(train_df) + len(test_df) + len(val_df):,} samples")
         
         self._log_memory_usage("After loading")
         return train_df, test_df, val_df
@@ -138,32 +129,32 @@ class OptimizedMLPipeline:
         """
         if self.verbose:
             print("\n" + "="*50)
-            print("🔍 STEP 3: Data Inspection")
+            print(" STEP 3: Data Inspection")
             print("="*50)
         
         datasets = {'Train': train_df, 'Test': test_df, 'Validation': val_df}
         
         for name, df in datasets.items():
-            print(f"\n📋 {name} Dataset:")
+            print(f"\n {name} Dataset:")
             print(f"   Shape: {df.shape}")
             print(f"   Memory usage: {df.memory_usage(deep=True).sum() / 1024**2:.1f} MB")
             
             # Missing values
             missing = df.isnull().sum()
             if missing.sum() > 0:
-                print(f"   ⚠️  Missing values: {missing[missing > 0].to_dict()}")
+                print(f"     Missing values: {missing[missing > 0].to_dict()}")
             else:
-                print("   ✅ No missing values")
+                print("    No missing values")
             
             # Duplicates
             duplicates = df.duplicated().sum()
-            print(f"   🔄 Duplicates: {duplicates}")
+            print(f"    Duplicates: {duplicates}")
             
             # Unique values in categorical columns
             if 'subject_name' in df.columns:
-                print(f"   📚 Subjects: {df['subject_name'].nunique()}")
+                print(f"    Subjects: {df['subject_name'].nunique()}")
             if 'choice_type' in df.columns:
-                print(f"   🎯 Choice types: {df['choice_type'].value_counts().to_dict()}")
+                print(f"    Choice types: {df['choice_type'].value_counts().to_dict()}")
     
     def _clean_text_fast(self, text: str) -> str:
         """Fast text cleaning function"""
@@ -188,7 +179,7 @@ class OptimizedMLPipeline:
         """
         if self.verbose:
             print("\n" + "="*50)
-            print("🧹 STEP 4: Data Cleaning & Preprocessing")
+            print(" STEP 4: Data Cleaning & Preprocessing")
             print("="*50)
         
         start_time = time.time()
@@ -227,7 +218,7 @@ class OptimizedMLPipeline:
             
             # Clean text columns
             if self.verbose:
-                print(f"   🧹 Cleaning {name} dataset...")
+                print(f"    Cleaning {name} dataset...")
             
             for col in text_columns:
                 if col in df.columns:
@@ -236,7 +227,7 @@ class OptimizedMLPipeline:
                     df[col] = df[col].apply(self._clean_text_fast)
             
             if self.verbose and removed > 0:
-                print(f"   🗑️  Removed {removed} duplicates from {name}")
+                print(f"     Removed {removed} duplicates from {name}")
             
             return df
         
@@ -250,7 +241,7 @@ class OptimizedMLPipeline:
         
         clean_time = time.time() - start_time
         if self.verbose:
-            print(f"✅ Cleaning completed in {clean_time:.2f}s")
+            print(f" Cleaning completed in {clean_time:.2f}s")
         
         self._log_memory_usage("After cleaning")
         return train_clean, test_clean, val_clean
@@ -262,7 +253,7 @@ class OptimizedMLPipeline:
         """
         if self.verbose:
             print("\n" + "="*50)
-            print("🏷️  STEP 5: Categorical Feature Encoding")
+            print("  STEP 5: Categorical Feature Encoding")
             print("="*50)
         
         start_time = time.time()
@@ -281,7 +272,7 @@ class OptimizedMLPipeline:
                 encoders[col] = encoder
                 
                 if self.verbose:
-                    print(f"   🏷️  Encoded {col}: {len(encoder.classes_)} unique values")
+                    print(f"    Encoded {col}: {len(encoder.classes_)} unique values")
         
         # Split back into original datasets
         train_len = len(train_df)
@@ -296,7 +287,7 @@ class OptimizedMLPipeline:
         
         encode_time = time.time() - start_time
         if self.verbose:
-            print(f"✅ Encoding completed in {encode_time:.2f}s")
+            print(f" Encoding completed in {encode_time:.2f}s")
         
         return train_encoded, test_encoded, val_encoded
     
@@ -307,7 +298,7 @@ class OptimizedMLPipeline:
         """
         if self.verbose:
             print("\n" + "="*50)
-            print("📊 STEP 6: TF-IDF Vectorization")
+            print(" STEP 6: TF-IDF Vectorization")
             print("="*50)
         
         start_time = time.time()
@@ -431,7 +422,7 @@ class OptimizedMLPipeline:
         )
         
         if self.verbose:
-            print("   🔄 Fitting TF-IDF vectorizer...")
+            print("    Fitting TF-IDF vectorizer...")
         
         # Fit on training data and transform all datasets
         X_train_tfidf = self.vectorizer.fit_transform(train_text)
@@ -441,10 +432,10 @@ class OptimizedMLPipeline:
         tfidf_time = time.time() - start_time
         
         if self.verbose:
-            print(f"✅ TF-IDF completed in {tfidf_time:.2f}s")
-            print(f"   📊 Feature matrix shape: {X_train_tfidf.shape}")
-            print(f"   🎯 Vocabulary size: {len(self.vectorizer.vocabulary_)}")
-            print(f"   💾 Sparsity: {(1 - X_train_tfidf.nnz / np.prod(X_train_tfidf.shape)) * 100:.1f}%")
+            print(f" TF-IDF completed in {tfidf_time:.2f}s")
+            print(f" Feature matrix shape: {X_train_tfidf.shape}")
+            print(f" Vocabulary size: {len(self.vectorizer.vocabulary_)}")
+            print(f" Sparsity: {(1 - X_train_tfidf.nnz / np.prod(X_train_tfidf.shape)) * 100:.1f}%")
         
         self._log_memory_usage("After TF-IDF")
         return X_train_tfidf, X_test_tfidf, X_val_tfidf
@@ -457,14 +448,14 @@ class OptimizedMLPipeline:
         """
         if self.verbose:
             print("\n" + "="*50)
-            print("🎯 FEATURE SELECTION")
+            print(" FEATURE SELECTION")
             print("="*50)
         
         start_time = time.time()
         
         # Use mutual information for feature selection (better for classification)
         if self.verbose:
-            print(f"   🔄 Selecting top {k_features} features using mutual information...")
+            print(f"    Selecting top {k_features} features using mutual information...")
         
         self.feature_selector = SelectKBest(score_func=mutual_info_classif, k=k_features)
         
@@ -476,10 +467,10 @@ class OptimizedMLPipeline:
         selection_time = time.time() - start_time
         
         if self.verbose:
-            print(f"✅ Feature selection completed in {selection_time:.2f}s")
-            print(f"   📊 Original features: {X_train.shape[1]}")
-            print(f"   🎯 Selected features: {X_train_selected.shape[1]}")
-            print(f"   📉 Reduction: {(1 - X_train_selected.shape[1]/X_train.shape[1]) * 100:.1f}%")
+            print(f" Feature selection completed in {selection_time:.2f}s")
+            print(f" Original features: {X_train.shape[1]}")
+            print(f" Selected features: {X_train_selected.shape[1]}")
+            print(f" Reduction: {(1 - X_train_selected.shape[1]/X_train.shape[1]) * 100:.1f}%")
         
         return X_train_selected, X_val_selected, X_test_selected
     
@@ -490,7 +481,7 @@ class OptimizedMLPipeline:
         """
         if self.verbose:
             print("\n" + "="*50)
-            print("✂️  STEP 7: Data Splitting")
+            print("  STEP 7: Data Splitting")
             print("="*50)
         
         # Use choice_type as target for binary classification (single vs multi)
@@ -508,10 +499,10 @@ class OptimizedMLPipeline:
         )
         
         if self.verbose:
-            print(f"✅ Data split completed")
-            print(f"   📈 Training set: {X_train_split.shape[0]:,} samples")
-            print(f"   ✔️  Validation set: {X_val_split.shape[0]:,} samples")
-            print(f"   🎯 Number of classes: {len(np.unique(y))}")
+            print(f" Data split completed")
+            print(f"    Training set: {X_train_split.shape[0]:,} samples")
+            print(f"    Validation set: {X_val_split.shape[0]:,} samples")
+            print(f"    Number of classes: {len(np.unique(y))}")
         
         return X_train_split, X_val_split, y_train_split, y_val_split
     
@@ -522,7 +513,7 @@ class OptimizedMLPipeline:
         """
         if self.verbose:
             print("\n" + "="*50)
-            print("🔄 STEP 8: PCA Dimensionality Reduction")
+            print(" STEP 8: PCA Dimensionality Reduction")
             print("="*50)
         
         start_time = time.time()
@@ -539,7 +530,7 @@ class OptimizedMLPipeline:
         
         # Apply feature scaling before PCA for better performance
         if self.verbose:
-            print("   🔄 Applying feature scaling...")
+            print("    Applying feature scaling...")
         
         scaler = StandardScaler()
         X_train_scaled = scaler.fit_transform(X_train_dense)
@@ -553,7 +544,7 @@ class OptimizedMLPipeline:
         self.pca = PCA(n_components=n_components, random_state=42)
         
         if self.verbose:
-            print(f"   🔄 Applying PCA with {n_components*100}% variance retention...")
+            print(f"   Applying PCA with {n_components*100}% variance retention...")
         
         X_train_pca = self.pca.fit_transform(X_train_scaled)
         X_val_pca = self.pca.transform(X_val_scaled)
@@ -562,11 +553,11 @@ class OptimizedMLPipeline:
         pca_time = time.time() - start_time
         
         if self.verbose:
-            print(f"✅ PCA completed in {pca_time:.2f}s")
-            print(f"   📊 Original dimensions: {X_train_dense.shape[1]}")
-            print(f"   📉 Reduced dimensions: {X_train_pca.shape[1]}")
-            print(f"   📈 Variance explained: {self.pca.explained_variance_ratio_.sum():.3f}")
-            print(f"   🗜️  Compression ratio: {X_train_pca.shape[1]/X_train_dense.shape[1]:.3f}")
+            print(f" PCA completed in {pca_time:.2f}s")
+            print(f"    Original dimensions: {X_train_dense.shape[1]}")
+            print(f"    Reduced dimensions: {X_train_pca.shape[1]}")
+            print(f"    Variance explained: {self.pca.explained_variance_ratio_.sum():.3f}")
+            print(f"     Compression ratio: {X_train_pca.shape[1]/X_train_dense.shape[1]:.3f}")
         
         # Memory cleanup
         del X_train_dense, X_val_dense, X_test_dense, X_train_scaled, X_val_scaled, X_test_scaled
@@ -582,7 +573,7 @@ class OptimizedMLPipeline:
         """
         if self.verbose:
             print("\n" + "="*50)
-            print("🤖 STEP 9: Model Training & Stacking")
+            print(" STEP 9: Model Training & Stacking")
             print("="*50)
         
         # Ultra-optimized models for 80%+ accuracy
@@ -633,11 +624,11 @@ class OptimizedMLPipeline:
         
         # Train individual models and evaluate
         if self.verbose:
-            print("\n📊 Individual Model Training:")
+            print("\n Individual Model Training:")
         
         for name, model in base_models.items():
             if self.verbose:
-                print(f"\n🔄 Training {name}...")
+                print(f"\n Training {name}...")
             
             start_time = time.time()
             
@@ -661,11 +652,11 @@ class OptimizedMLPipeline:
             individual_models[name] = model
             
             if self.verbose:
-                print(f"   ✅ {name}: {accuracy:.4f} accuracy ({train_time:.2f}s)")
+                print(f"   {name}: {accuracy:.4f} accuracy ({train_time:.2f}s)")
         
         # Create Voting Ensemble (often better for binary classification)
         if self.verbose:
-            print(f"\n🔄 Training Voting Ensemble...")
+            print(f"\n Training Voting Ensemble...")
         
         start_time = time.time()
         
@@ -676,8 +667,7 @@ class OptimizedMLPipeline:
             ('svm', base_models['SVM'])
         ]
         
-        # Create weighted soft voting classifier (give more weight to better models)
-        # Weight based on actual performance: LR gets highest weight since it performed best
+        
         weights = [2, 5, 1]  # RF=2, LR=5, SVM=1 based on actual performance (LR: 83.5%)
         voting_classifier = VotingClassifier(
             estimators=estimators,
@@ -705,30 +695,24 @@ class OptimizedMLPipeline:
         }
         
         if self.verbose:
-            print(f"   ✅ Voting Ensemble: {voting_accuracy:.4f} accuracy ({voting_train_time:.2f}s)")
+            print(f"    Voting Ensemble: {voting_accuracy:.4f} accuracy ({voting_train_time:.2f}s)")
         
         # Stacked ensemble removed - Voting ensemble already achieved target (83.0%)
         
         # Target achieved with Voting Ensemble!
         if self.verbose and voting_accuracy >= 0.80:
-            print(f"\n🎉 TARGET ACHIEVED! Voting Ensemble: {voting_accuracy:.4f} >= 0.80")
+            print(f"\n Voting Ensemble: {voting_accuracy:.4f} >= 0.80")
         
         self.models = {name: result['model'] for name, result in results.items()}
         self.results = results
         
         # Display results summary
         if self.verbose:
-            print(f"\n📊 Model Performance Summary:")
-            print(f"   🌲 Random Forest: {results['Random Forest']['accuracy']:.4f}")
-            print(f"   📈 Logistic Regression: {results['Logistic Regression']['accuracy']:.4f}")
-            print(f"   🎯 SVM: {results['SVM']['accuracy']:.4f}")
-            print(f"   🗳️  Voting Ensemble: {results['Voting Ensemble']['accuracy']:.4f}")
-            
-            # Check if target accuracy is achieved with voting ensemble
-            if voting_accuracy >= 0.80:
-                print(f"   🎉 TARGET ACHIEVED! Voting Ensemble: {voting_accuracy:.4f} >= 0.80")
-            else:
-                print(f"   ⚠️  Target accuracy not reached. Voting Ensemble: {voting_accuracy:.4f} < 0.80")
+            print(f"\n Model Performance Summary:")
+            print(f"     Random Forest: {results['Random Forest']['accuracy']:.4f}")
+            print(f"     Logistic Regression: {results['Logistic Regression']['accuracy']:.4f}")
+            print(f"     SVM: {results['SVM']['accuracy']:.4f}")
+            print(f"     Voting Ensemble: {results['Voting Ensemble']['accuracy']:.4f}")
         
         return results
     
@@ -738,7 +722,7 @@ class OptimizedMLPipeline:
         """
         if self.verbose:
             print("\n" + "="*50)
-            print("📊 STEP 10: Evaluation & Visualization")
+            print(" STEP 10: Evaluation & Visualization")
             print("="*50)
         
         # Simple evaluation (no complex plotting)
@@ -746,9 +730,9 @@ class OptimizedMLPipeline:
         best_predictions = self.results[best_model_name]['predictions']
         
         if self.verbose:
-            print("✅ Evaluation completed")
-            print("   📊 Dashboard generation skipped")
-            print("\n📋 Detailed Classification Report (Voting Ensemble):")
+            print("  Evaluation completed")
+            print("     Dashboard generation skipped")
+            print("\n  Detailed Classification Report (Voting Ensemble):")
             
             # Print detailed classification report for voting ensemble
             target_names = None
@@ -763,7 +747,7 @@ class OptimizedMLPipeline:
         """
         if self.verbose:
             print("\n" + "="*50)
-            print("💾 SAVING TRAINED MODELS")
+            print("  SAVING TRAINED MODELS")
             print("="*50)
         
         # Create models directory
@@ -776,7 +760,7 @@ class OptimizedMLPipeline:
             with open(model_file, 'wb') as f:
                 pickle.dump(model_data['model'], f)
             if self.verbose:
-                print(f"   ✅ Saved: {model_name} -> {model_file.name}")
+                print(f"    Saved: {model_name} -> {model_file.name}")
         
         # Save preprocessing components
         preprocessing_components = {
@@ -792,9 +776,9 @@ class OptimizedMLPipeline:
             pickle.dump(preprocessing_components, f)
         
         if self.verbose:
-            print(f"   ✅ Saved: Preprocessing Components -> {preprocessing_file.name}")
-            print(f"   📁 All models saved in: {models_dir}")
-            print(f"   📊 Total files saved: {len(list(models_dir.glob('*.pkl')))}")
+            print(f"     Saved: Preprocessing Components -> {preprocessing_file.name}")
+            print(f"     All models saved in: {models_dir}")
+            print(f"     Total files saved: {len(list(models_dir.glob('*.pkl')))}")
     
     def run_complete_pipeline(self) -> Dict[str, Any]:
         """
@@ -803,7 +787,7 @@ class OptimizedMLPipeline:
         total_start_time = time.time()
         
         if self.verbose:
-            print("🚀 Starting Complete ML Pipeline")
+            print("  Starting Complete ML Pipeline")
             print("="*60)
         
         # Step 1-2: Load datasets
@@ -854,20 +838,20 @@ class OptimizedMLPipeline:
         
         if self.verbose:
             print("\n" + "="*60)
-            print("🎉 PIPELINE COMPLETED SUCCESSFULLY!")
+            print("  PIPELINE COMPLETED SUCCESSFULLY!")
             print("="*60)
-            print(f"⏱️  Total execution time: {total_time:.2f} seconds")
+            print(f"   Total execution time: {total_time:.2f} seconds")
             
             # Show voting ensemble result (target achieved)
             voting_acc = results['Voting Ensemble']['accuracy']
             
-            print(f"🏆 Voting Ensemble: {voting_acc:.4f}")
-            print(f"🎯 Target accuracy range: 0.80 - 0.92")
+            print(f"  Voting Ensemble: {voting_acc:.4f}")
+            print(f"  Target accuracy range: 0.80 - 0.92")
             if voting_acc >= 0.80:
-                print(f"🎉 TARGET ACCURACY ACHIEVED! ({voting_acc:.4f} >= 0.80)")
+                print(f"  TARGET ACCURACY ACHIEVED! ({voting_acc:.4f} >= 0.80)")
             else:
-                print(f"⚠️  Target accuracy not reached ({voting_acc:.4f} < 0.80)")
-            print(f"💾 Final memory usage: {psutil.virtual_memory().percent:.1f}%")
+                print(f"   Target accuracy not reached ({voting_acc:.4f} < 0.80)")
+            print(f"  Final memory usage: {psutil.virtual_memory().percent:.1f}%")
         
         return {
             'results': results,
