@@ -1,10 +1,4 @@
-#!/usr/bin/env python3
-"""
-Flask API for Medical Question Generator
-Integrates with the trained ML pipeline for intelligent question generation
-"""
-
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_file
 from flask_cors import CORS
 import pickle
 import pandas as pd
@@ -13,6 +7,13 @@ import random
 import json
 from pathlib import Path
 import os
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from datetime import datetime
+import io
 
 app = Flask(__name__)
 CORS(app)
@@ -38,9 +39,9 @@ class MedicalQuestionAPI:
             with open(self.models_dir / 'preprocessing_components.pkl', 'rb') as f:
                 self.preprocessing = pickle.load(f)
             
-            print("✅ Models loaded successfully")
+            print(" Models loaded successfully")
         except Exception as e:
-            print(f"❌ Error loading models: {e}")
+            print(f" Error loading models: {e}")
             self.voting_model = None
             self.preprocessing = None
     
@@ -67,38 +68,19 @@ class MedicalQuestionAPI:
                 'microbiology': ['Microbiology', 'Medicine', 'Pathology']
             }
             
-            print(f"✅ Loaded {len(self.all_questions_df)} questions from dataset")
+            print(f" Loaded {len(self.all_questions_df)} questions from dataset")
             return True
             
         except Exception as e:
-            print(f"❌ Error loading question dataset: {e}")
-            # Fallback to templates if dataset loading fails
-            self.load_question_templates()
+            print(f" Error loading question dataset: {e}")
             return False
     
-    def load_question_templates(self):
-        """Fallback: Load question templates for different topics"""
-        self.question_templates = {
-            'anatomy': {
-                'easy': [
-                    {
-                        'template': 'Which {organ} is responsible for {function}?',
-                        'variations': [
-                            {'organ': 'organ', 'function': 'pumping blood', 'answer': 'Heart', 'options': ['Heart', 'Liver', 'Kidney', 'Lung']},
-                            {'organ': 'organ', 'function': 'filtering blood', 'answer': 'Kidney', 'options': ['Heart', 'Liver', 'Kidney', 'Lung']},
-                            {'organ': 'organ', 'function': 'gas exchange', 'answer': 'Lung', 'options': ['Heart', 'Liver', 'Kidney', 'Lung']},
-                            {'organ': 'organ', 'function': 'producing bile', 'answer': 'Liver', 'options': ['Heart', 'Liver', 'Kidney', 'Lung']},
-                            {'organ': 'organ', 'function': 'digesting food', 'answer': 'Stomach', 'options': ['Heart', 'Stomach', 'Kidney', 'Lung']},
-                        ]
-                    }
-                ]
-            }
-        }
+
     
     def generate_questions_from_dataset(self, topic, count, difficulty):
         """Generate questions using ML model and dataset"""
         if not hasattr(self, 'all_questions_df'):
-            return self.generate_questions_from_templates(topic, count, difficulty)
+            return []
         
         # Create cache key for this request
         cache_key = f"{topic}_{difficulty}"
@@ -148,7 +130,7 @@ class MedicalQuestionAPI:
         
         # If we don't have enough unique questions, reset the cache
         if len(available_questions) < count:
-            print(f"⚠️ Resetting question cache for {topic}_{difficulty}")
+            print(f" Resetting question cache for {topic}_{difficulty}")
             self.generated_questions_cache[cache_key] = set()
             # Regenerate available questions
             available_questions = []
@@ -192,7 +174,7 @@ class MedicalQuestionAPI:
             }
             questions.append(question)
         
-        print(f"✅ Generated {len(questions)} unique questions for {topic}_{difficulty}")
+        print(f" Generated {len(questions)} unique questions for {topic}_{difficulty}")
         return questions
     
     def classify_questions_by_difficulty(self, questions_df, target_difficulty):
@@ -212,36 +194,7 @@ class MedicalQuestionAPI:
         
         return filtered
     
-    def generate_questions_from_templates(self, topic, count, difficulty):
-        """Fallback: Generate questions from templates"""
-        if not hasattr(self, 'question_templates'):
-            return []
-        
-        topic_templates = self.question_templates.get(topic, self.question_templates.get('anatomy', {}))
-        difficulty_templates = topic_templates.get(difficulty, topic_templates.get('easy', []))
-        
-        questions = []
-        for i in range(count):
-            if difficulty_templates:
-                template = random.choice(difficulty_templates)
-                variation = random.choice(template['variations'])
-                
-                question_text = template['template'].format(**{k: v for k, v in variation.items() if k not in ['answer', 'options']})
-                options = variation['options'].copy()
-                random.shuffle(options)
-                correct_index = options.index(variation['answer'])
-                
-                questions.append({
-                    'id': i + 1,
-                    'question': question_text,
-                    'options': options,
-                    'correct': correct_index,
-                    'topic': topic,
-                    'difficulty': difficulty,
-                    'explanation': f"The correct answer is {variation['answer']}."
-                })
-        
-        return questions
+
     
     def generate_questions(self, topic, count, difficulty):
         """Main method: Generate questions using ML model and dataset"""
@@ -343,7 +296,7 @@ def evaluate():
 @app.route('/api/topics', methods=['GET'])
 def get_topics():
     """Get available topics"""
-    topics = list(question_api.question_templates.keys())
+    topics = ['anatomy', 'physiology', 'pathology', 'pharmacology', 'microbiology']
     return jsonify({
         'success': True,
         'topics': topics
@@ -384,11 +337,95 @@ def clear_cache():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/download-pdf', methods=['POST'])
+def download_pdf():
+    """Generate and download PDF report"""
+    try:
+        data = request.get_json()
+        results = data.get('results')
+        
+        if not results:
+            return jsonify({'error': 'Results data is required'}), 400
+        
+        # Create PDF in memory
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = []
+        
+        # Title
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            spaceAfter=30,
+            alignment=1  # Center alignment
+        )
+        story.append(Paragraph("Medical Question Test Results", title_style))
+        
+        # Test info
+        info_data = [
+            ['Test Date:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
+            ['Topic:', results.get('topic', 'N/A')],
+            ['Difficulty:', results.get('difficulty', 'N/A')],
+            ['Total Questions:', str(results.get('total', 0))],
+            ['Correct Answers:', str(results.get('correct', 0))],
+            ['Score:', f"{results.get('percentage', 0)}%"]
+        ]
+        
+        info_table = Table(info_data, colWidths=[2*inch, 3*inch])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        story.append(info_table)
+        story.append(Spacer(1, 20))
+        
+        # Questions review
+        story.append(Paragraph("Question Review", styles['Heading2']))
+        story.append(Spacer(1, 12))
+        
+        questions = results.get('questions', [])
+        for i, q in enumerate(questions, 1):
+            # Question text
+            story.append(Paragraph(f"<b>Question {i}:</b> {q['question']}", styles['Normal']))
+            story.append(Spacer(1, 6))
+            
+            # Answer info
+            is_correct = q.get('isCorrect', False)
+            status = "✓ Correct" if is_correct else "✗ Incorrect"
+            color = "green" if is_correct else "red"
+            
+            story.append(Paragraph(f"<b>Your Answer:</b> {q.get('userAnswer', 'Not answered')}", styles['Normal']))
+            story.append(Paragraph(f"<b>Correct Answer:</b> {q.get('correctAnswer', 'N/A')}", styles['Normal']))
+            story.append(Paragraph(f"<b>Status:</b> <font color='{color}'>{status}</font>", styles['Normal']))
+            story.append(Spacer(1, 15))
+        
+        # Build PDF
+        doc.build(story)
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f'medical_test_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf',
+            mimetype='application/pdf'
+        )
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
-    print("🚀 Starting Medical Question Generator API...")
-    print("📊 ML Models Status:")
-    print(f"   Voting Ensemble: {'✅ Loaded' if question_api.voting_model else '❌ Not loaded'}")
-    print(f"   Preprocessing: {'✅ Loaded' if question_api.preprocessing else '❌ Not loaded'}")
-    print("\n🌐 Server starting on http://localhost:5000")
+    print("  Starting Medical Question Generator API...")
+    print("  ML Models Status:")
+    print(f"   Voting Ensemble: {' Loaded' if question_api.voting_model else ' Not loaded'}")
+    print(f"   Preprocessing: {' Loaded' if question_api.preprocessing else ' Not loaded'}")
+    print("\n Server starting on http://localhost:5000")
     
     app.run(debug=True, host='0.0.0.0', port=5000)

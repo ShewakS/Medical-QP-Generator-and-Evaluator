@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Tuple, Dict, List, Any
 
 # ML Libraries
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, StratifiedKFold
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.decomposition import PCA
@@ -20,7 +20,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.feature_selection import SelectKBest, chi2, mutual_info_classif
 
 # Text Processing
@@ -28,9 +27,6 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
-
-# Visualization (minimal for confusion matrix only)
-from sklearn.metrics import confusion_matrix
 
 # Performance
 from joblib import Parallel, delayed
@@ -559,7 +555,6 @@ class OptimizedMLPipeline:
             print(f"    Variance explained: {self.pca.explained_variance_ratio_.sum():.3f}")
             print(f"     Compression ratio: {X_train_pca.shape[1]/X_train_dense.shape[1]:.3f}")
         
-        # Memory cleanup
         del X_train_dense, X_val_dense, X_test_dense, X_train_scaled, X_val_scaled, X_test_scaled
         gc.collect()
         
@@ -697,9 +692,7 @@ class OptimizedMLPipeline:
         if self.verbose:
             print(f"    Voting Ensemble: {voting_accuracy:.4f} accuracy ({voting_train_time:.2f}s)")
         
-        # Stacked ensemble removed - Voting ensemble already achieved target (83.0%)
-        
-        # Target achieved with Voting Ensemble!
+
         if self.verbose and voting_accuracy >= 0.80:
             print(f"\n Voting Ensemble: {voting_accuracy:.4f} >= 0.80")
         

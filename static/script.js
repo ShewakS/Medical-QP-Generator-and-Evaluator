@@ -613,12 +613,14 @@ class MedicalQuestionApp {
         this.showSection('generation-section');
     }
 
-    downloadResults() {
+    async downloadResults() {
         const results = {
             timestamp: new Date().toISOString(),
             topic: this.questions[0]?.topic || 'Unknown',
             difficulty: this.questions[0]?.difficulty || 'Unknown',
-            score: this.results,
+            total: this.results.total,
+            correct: this.results.correct,
+            percentage: this.results.percentage,
             questions: this.questions.map((q, index) => ({
                 question: q.question,
                 userAnswer: this.userAnswers[index] !== undefined ? q.options[this.userAnswers[index]] : 'Not answered',
@@ -627,13 +629,30 @@ class MedicalQuestionApp {
             }))
         };
 
-        const dataStr = JSON.stringify(results, null, 2);
-        const dataBlob = new Blob([dataStr], {type: 'application/json'});
-        
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(dataBlob);
-        link.download = `medical_test_results_${new Date().toISOString().split('T')[0]}.json`;
-        link.click();
+        try {
+            const response = await fetch('/api/download-pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ results })
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `medical_test_results_${new Date().toISOString().split('T')[0]}.pdf`;
+                link.click();
+                window.URL.revokeObjectURL(url);
+            } else {
+                throw new Error('PDF generation failed');
+            }
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        }
     }
 
     delay(ms) {
