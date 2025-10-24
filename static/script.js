@@ -123,13 +123,23 @@ class MedicalQuestionApp {
     }
 
     generateMockQuestions(topic, count, difficulty) {
+        // Initialize question tracking if not exists
+        if (!this.generatedQuestionsTracker) {
+            this.generatedQuestionsTracker = {};
+        }
+        
+        const cacheKey = `${topic}_${difficulty}`;
+        if (!this.generatedQuestionsTracker[cacheKey]) {
+            this.generatedQuestionsTracker[cacheKey] = new Set();
+        }
+
         const questionBank = {
             anatomy: [
                 {
-                    question: "Which bone is the longest in the human body?",
+                    question: "Which bone connects the shoulder to the elbow?",
                     options: ["Tibia", "Femur", "Humerus", "Radius"],
-                    correct: 1,
-                    explanation: "The femur (thigh bone) is the longest and strongest bone in the human body."
+                    correct: 2,
+                    explanation: "The humerus is the bone that connects the shoulder to the elbow in the upper arm."
                 },
                 {
                     question: "How many chambers does a human heart have?",
@@ -142,6 +152,18 @@ class MedicalQuestionApp {
                     options: ["Cerebrum", "Cerebellum", "Medulla", "Pons"],
                     correct: 1,
                     explanation: "The cerebellum is responsible for balance, coordination, and fine motor control."
+                },
+                {
+                    question: "What is the largest organ in the human body?",
+                    options: ["Liver", "Brain", "Skin", "Lungs"],
+                    correct: 2,
+                    explanation: "The skin is the largest organ in the human body by surface area."
+                },
+                {
+                    question: "Which muscle is responsible for breathing?",
+                    options: ["Diaphragm", "Intercostals", "Pectorals", "Abdominals"],
+                    correct: 0,
+                    explanation: "The diaphragm is the primary muscle responsible for breathing."
                 }
             ],
             physiology: [
@@ -156,6 +178,18 @@ class MedicalQuestionApp {
                     options: ["Cortisol", "Insulin", "Thyroxine", "Adrenaline"],
                     correct: 1,
                     explanation: "Insulin, produced by the pancreas, regulates blood glucose levels."
+                },
+                {
+                    question: "What is the normal body temperature in Celsius?",
+                    options: ["36°C", "37°C", "38°C", "39°C"],
+                    correct: 1,
+                    explanation: "Normal body temperature is approximately 37°C (98.6°F)."
+                },
+                {
+                    question: "Which organ produces bile?",
+                    options: ["Pancreas", "Liver", "Gallbladder", "Stomach"],
+                    correct: 1,
+                    explanation: "The liver produces bile, which is stored in the gallbladder."
                 }
             ],
             pathology: [
@@ -170,6 +204,18 @@ class MedicalQuestionApp {
                     options: ["Hypotension", "Hypertension", "Bradycardia", "Tachycardia"],
                     correct: 1,
                     explanation: "Hypertension is the medical term for high blood pressure."
+                },
+                {
+                    question: "What does diabetes primarily affect?",
+                    options: ["Blood pressure", "Blood sugar", "Heart rate", "Breathing"],
+                    correct: 1,
+                    explanation: "Diabetes primarily affects blood sugar (glucose) regulation."
+                },
+                {
+                    question: "Which condition involves inflammation of joints?",
+                    options: ["Arthritis", "Osteoporosis", "Fibromyalgia", "Tendinitis"],
+                    correct: 0,
+                    explanation: "Arthritis is characterized by inflammation of one or more joints."
                 }
             ],
             pharmacology: [
@@ -184,6 +230,18 @@ class MedicalQuestionApp {
                     options: ["Antivirals", "Antibiotics", "Antifungals", "Antihistamines"],
                     correct: 1,
                     explanation: "Antibiotics are specifically designed to treat bacterial infections."
+                },
+                {
+                    question: "What is the generic name for Advil?",
+                    options: ["Acetaminophen", "Ibuprofen", "Aspirin", "Naproxen"],
+                    correct: 1,
+                    explanation: "Ibuprofen is the generic name for the brand name drug Advil."
+                },
+                {
+                    question: "Which type of drug reduces fever?",
+                    options: ["Antibiotic", "Antipyretic", "Antihistamine", "Antacid"],
+                    correct: 1,
+                    explanation: "Antipyretic drugs are used to reduce fever."
                 }
             ],
             microbiology: [
@@ -192,21 +250,79 @@ class MedicalQuestionApp {
                     options: ["Virus", "Bacteria", "Fungus", "Parasite"],
                     correct: 1,
                     explanation: "Tuberculosis is caused by Mycobacterium tuberculosis, a type of bacteria."
+                },
+                {
+                    question: "What type of pathogen causes the common cold?",
+                    options: ["Bacteria", "Virus", "Fungus", "Parasite"],
+                    correct: 1,
+                    explanation: "The common cold is caused by various viruses, most commonly rhinoviruses."
+                },
+                {
+                    question: "Which organism causes malaria?",
+                    options: ["Virus", "Bacteria", "Parasite", "Fungus"],
+                    correct: 2,
+                    explanation: "Malaria is caused by Plasmodium parasites transmitted by mosquitoes."
                 }
             ]
         };
 
-        // Get questions for the selected topic
-        let availableQuestions = questionBank[topic] || questionBank.anatomy;
+        // Get base questions for the selected topic
+        const baseQuestions = questionBank[topic] || questionBank.anatomy;
         
-        // If we need more questions than available, repeat some
-        while (availableQuestions.length < count) {
-            availableQuestions = [...availableQuestions, ...questionBank[topic]];
+        // Generate all possible unique variations
+        const allPossibleQuestions = [];
+        const questionHashes = new Set();
+        
+        baseQuestions.forEach(baseQ => {
+            // Create multiple variations by shuffling options differently
+            for (let seed = 0; seed < 10; seed++) {
+                const options = [...baseQ.options];
+                
+                // Create deterministic shuffle based on seed
+                for (let i = options.length - 1; i > 0; i--) {
+                    const j = Math.floor((seed * 31 + i) % (i + 1));
+                    [options[i], options[j]] = [options[j], options[i]];
+                }
+                
+                const questionHash = `${baseQ.question}_${options.join('_')}`;
+                
+                if (!questionHashes.has(questionHash)) {
+                    questionHashes.add(questionHash);
+                    const correct = options.indexOf(baseQ.options[baseQ.correct]);
+                    
+                    allPossibleQuestions.push({
+                        ...baseQ,
+                        options: options,
+                        correct: correct,
+                        hash: questionHash
+                    });
+                }
+            }
+        });
+        
+        // Filter out previously used questions
+        const availableQuestions = allPossibleQuestions.filter(q => 
+            !this.generatedQuestionsTracker[cacheKey].has(q.hash)
+        );
+        
+        // If not enough unique questions, reset the tracker
+        if (availableQuestions.length < count) {
+            console.log(`⚠️ Resetting question tracker for ${cacheKey} - generating fresh questions`);
+            this.generatedQuestionsTracker[cacheKey].clear();
+            availableQuestions.push(...allPossibleQuestions);
         }
-
-        // Shuffle and select the required number
-        const shuffled = this.shuffleArray([...availableQuestions]);
-        return shuffled.slice(0, count).map((q, index) => ({
+        
+        // Shuffle and select unique questions
+        this.shuffleArray(availableQuestions);
+        const selectedQuestions = availableQuestions.slice(0, count);
+        
+        // Track selected questions
+        selectedQuestions.forEach(q => {
+            this.generatedQuestionsTracker[cacheKey].add(q.hash);
+        });
+        
+        // Return formatted questions
+        return selectedQuestions.map((q, index) => ({
             ...q,
             id: index + 1,
             topic: topic,
