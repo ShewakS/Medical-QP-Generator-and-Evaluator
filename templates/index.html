@@ -3,24 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medical Question Generator & Evaluator</title>
+    <title>SmartAI MedQuiz</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <i class="fas fa-stethoscope"></i>
-                <h1>Medical Question Generator & Evaluator</h1>
+                <h1><i class="fas fa-stethoscope"></i> SmartAI MedQuiz</h1>
                 <p>AI-Powered Medical Question Generation with Smart Evaluation</p>
             </div>
         </header>
-
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Question Generation Section -->
             <section id="generation-section" class="section active">
                 <div class="card">
                     <div class="card-header">
@@ -84,7 +79,6 @@
                 </div>
             </section>
 
-            <!-- Questions Display Section -->
             <section id="questions-section" class="section">
                 <div class="card">
                     <div class="card-header">
@@ -116,7 +110,6 @@
                 </div>
             </section>
 
-            <!-- Results Section -->
             <section id="results-section" class="section">
                 <div class="card">
                     <div class="card-header">
@@ -173,7 +166,6 @@
             </section>
         </main>
 
-        <!-- Loading Overlay -->
         <div id="loading-overlay" class="loading-overlay">
             <div class="loading-spinner">
                 <i class="fas fa-spinner fa-spin"></i>
