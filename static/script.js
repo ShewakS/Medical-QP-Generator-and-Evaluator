@@ -322,6 +322,12 @@ class MedicalQuestionApp {
         document.getElementById('time-taken').textContent = 
             `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
+        // Display selected topic and difficulty
+        const topic = this.questions[0]?.topic || 'Unknown';
+        const difficulty = this.questions[0]?.difficulty || 'Unknown';
+        document.getElementById('test-topic').textContent = topic.charAt(0).toUpperCase() + topic.slice(1);
+        document.getElementById('test-difficulty').textContent = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+
         // Performance analysis
         const analysisText = this.getPerformanceAnalysis();
         document.getElementById('analysis-text').innerHTML = analysisText;

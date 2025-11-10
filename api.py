@@ -43,11 +43,21 @@ class MedicalQuestionAPI:
             self.all_questions_df = pd.concat([self.train_df, self.test_df, self.validation_df], ignore_index=True)
             self.all_questions_df = self.all_questions_df.dropna(subset=['question', 'opa', 'opb', 'opc', 'opd'])
             self.topic_mapping = {
-                'anatomy': ['Anatomy', 'Physiology', 'Biochemistry'],
-                'physiology': ['Physiology', 'Biochemistry', 'Anatomy'],
-                'pathology': ['Pathology', 'Medicine', 'Surgery', 'Pharmacology'],
-                'pharmacology': ['Pharmacology', 'Medicine', 'Pathology'],
-                'microbiology': ['Microbiology', 'Medicine', 'Pathology']
+                'anatomy': ['Anatomy'],
+                'physiology': ['Physiology'],
+                'pathology': ['Pathology'],
+                'pharmacology': ['Pharmacology'],
+                'microbiology': ['Microbiology'],
+                'biochemistry': ['Biochemistry'],
+                'medicine': ['Medicine'],
+                'surgery': ['Surgery'],
+                'pediatrics': ['Pediatrics'],
+                'gynecology': ['Gynecology'],
+                'psychiatry': ['Psychiatry'],
+                'radiology': ['Radiology'],
+                'cardiology': ['Cardiology'],
+                'neurology': ['Neurology'],
+                'dermatology': ['Dermatology']
             }
             print(f" Loaded {len(self.all_questions_df)} questions from dataset")
             return True
@@ -69,7 +79,14 @@ class MedicalQuestionAPI:
         else:
             topic_questions = self.all_questions_df.copy()
         if len(topic_questions) == 0:
-            topic_questions = self.all_questions_df.copy()
+            # If no questions found for specific topic, try general medical subjects
+            general_subjects = ['Medicine', 'Surgery', 'Pathology']
+            topic_questions = self.all_questions_df[
+                self.all_questions_df['subject_name'].isin(general_subjects)
+            ].copy()
+            if len(topic_questions) == 0:
+                # Last resort: use all questions
+                topic_questions = self.all_questions_df.copy()
         if cache_key not in self.generated_questions_cache:
             self.generated_questions_cache[cache_key] = set()
         available_questions = []
@@ -244,7 +261,9 @@ def evaluate():
 
 @app.route('/api/topics', methods=['GET'])
 def get_topics():
-    topics = ['anatomy', 'physiology', 'pathology', 'pharmacology', 'microbiology']
+    topics = ['anatomy', 'physiology', 'pathology', 'pharmacology', 'microbiology', 
+             'biochemistry', 'medicine', 'surgery', 'pediatrics', 'gynecology', 
+             'psychiatry', 'radiology', 'cardiology', 'neurology', 'dermatology']
     return jsonify({'success': True, 'topics': topics})
 
 @app.route('/api/health', methods=['GET'])

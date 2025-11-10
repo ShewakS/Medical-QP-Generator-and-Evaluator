@@ -19,6 +19,8 @@ from sklearn.feature_selection import SelectKBest, mutual_info_classif
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
+import matplotlib.pyplot as plt
+import seaborn as sns
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -454,9 +456,13 @@ class OptimizedMLPipeline:
             print("="*50)
         best_model_name = 'Voting Ensemble'
         best_predictions = self.results[best_model_name]['predictions']
+        
+        # Create visualizations
+        self._create_visualizations()
+        
         if self.verbose:
             print("  Evaluation completed")
-            print("     Dashboard generation skipped")
+            print("     Visualizations saved")
             print("\n  Detailed Classification Report (Voting Ensemble):")
             target_names = None
             if hasattr(self, 'label_encoder') and self.label_encoder is not None:
@@ -490,6 +496,91 @@ class OptimizedMLPipeline:
             print(f"     Saved: Preprocessing Components -> {preprocessing_file.name}")
             print(f"     All models saved in: {models_dir}")
             print(f"     Total files saved: {len(list(models_dir.glob('*.pkl')))}")
+    
+    def _create_visualizations(self) -> None:
+        plt.style.use('default')
+        fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+        fig.suptitle('ML Pipeline Results Visualization', fontsize=16, fontweight='bold')
+        
+        # 1. Model Accuracy Comparison
+        model_names = list(self.results.keys())
+        accuracies = [self.results[name]['accuracy'] for name in model_names]
+        colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
+        
+        bars = axes[0,0].bar(model_names, accuracies, color=colors[:len(model_names)])
+        axes[0,0].set_title('Model Accuracy Comparison', fontweight='bold')
+        axes[0,0].set_ylabel('Accuracy')
+        axes[0,0].set_ylim(0, 1)
+        for bar, acc in zip(bars, accuracies):
+            axes[0,0].text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01, 
+                          f'{acc:.3f}', ha='center', va='bottom', fontweight='bold')
+        axes[0,0].tick_params(axis='x', rotation=45)
+        
+        # 2. Training Time Comparison
+        train_times = [self.results[name]['train_time'] for name in model_names]
+        axes[0,1].bar(model_names, train_times, color=colors[:len(model_names)])
+        axes[0,1].set_title('Training Time Comparison', fontweight='bold')
+        axes[0,1].set_ylabel('Time (seconds)')
+        axes[0,1].tick_params(axis='x', rotation=45)
+        
+        # 3. PCA Explained Variance
+        if hasattr(self, 'pca') and self.pca is not None:
+            cumsum_var = np.cumsum(self.pca.explained_variance_ratio_)
+            axes[1,0].plot(range(1, len(cumsum_var) + 1), cumsum_var, 'bo-', linewidth=2, markersize=6)
+            axes[1,0].axhline(y=0.95, color='r', linestyle='--', label='95% Variance')
+            axes[1,0].set_title('PCA Explained Variance Ratio', fontweight='bold')
+            axes[1,0].set_xlabel('Principal Components')
+            axes[1,0].set_ylabel('Cumulative Explained Variance')
+            axes[1,0].legend()
+            axes[1,0].grid(True, alpha=0.3)
+        
+        # 4. Performance Summary Pie Chart
+        best_acc = max(accuracies)
+        performance_data = [best_acc, 1-best_acc]
+        labels = ['Correct Predictions', 'Incorrect Predictions']
+        colors_pie = ['#2ECC71', '#E74C3C']
+        
+        wedges, texts, autotexts = axes[1,1].pie(performance_data, labels=labels, colors=colors_pie, 
+                                                 autopct='%1.1f%%', startangle=90)
+        axes[1,1].set_title(f'Best Model Performance\n({model_names[accuracies.index(best_acc)]})', fontweight='bold')
+        
+        plt.tight_layout()
+        plt.savefig('ml_pipeline_results.png', dpi=300, bbox_inches='tight')
+        if self.verbose:
+            print("     Visualization saved: ml_pipeline_results.png")
+        plt.close()
+    
+    def _create_final_summary_plot(self, results: Dict[str, Any]) -> None:
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        
+        # Create summary metrics
+        model_names = list(results.keys())
+        accuracies = [results[name]['accuracy'] for name in model_names]
+        
+        # Create horizontal bar chart
+        y_pos = np.arange(len(model_names))
+        bars = ax.barh(y_pos, accuracies, color=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'][:len(model_names)])
+        
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(model_names)
+        ax.set_xlabel('Accuracy Score')
+        ax.set_title('Final Model Performance Summary', fontsize=14, fontweight='bold')
+        ax.set_xlim(0, 1)
+        
+        # Add accuracy values on bars
+        for i, (bar, acc) in enumerate(zip(bars, accuracies)):
+            ax.text(bar.get_width() + 0.01, bar.get_y() + bar.get_height()/2, 
+                   f'{acc:.4f}', va='center', fontweight='bold')
+        
+        # Add target line
+        ax.axvline(x=0.80, color='red', linestyle='--', alpha=0.7, label='Target (80%)')
+        ax.legend()
+        
+        plt.tight_layout()
+        plt.savefig('final_model_summary.png', dpi=300, bbox_inches='tight')
+        if self.verbose:
+            print("     Final summary saved: final_model_summary.png")
+        plt.close()
     
     def run_complete_pipeline(self) -> Dict[str, Any]:
         total_start_time = time.time()
@@ -531,6 +622,11 @@ class OptimizedMLPipeline:
             else:
                 print(f"   Target accuracy not reached ({voting_acc:.4f} < 0.80)")
             print(f"  Final memory usage: {psutil.virtual_memory().percent:.1f}%")
+            print(f"  Visualizations: ml_pipeline_results.png, final_model_summary.png")
+        # Generate final visualization summary
+        if self.verbose:
+            self._create_final_summary_plot(results)
+        
         return {
             'results': results,
             'total_time': total_time,
