@@ -1,5 +1,8 @@
-from flask import Flask, request, jsonify, render_template, send_file
+from flask import Flask, request, jsonify, render_template, send_file, redirect, url_for, session
 from flask_cors import CORS
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from mongoengine import connect
+from models import User, TestResult
 import pickle
 import pandas as pd
 import random
@@ -11,9 +14,44 @@ from reportlab.lib import colors
 from reportlab.lib.units import inch
 from datetime import datetime
 import io
+import os
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+
+# MongoDB Database Configuration
+MONGODB_HOST = os.environ.get('MONGODB_HOST', 'localhost')
+MONGODB_PORT = int(os.environ.get('MONGODB_PORT', 27017))
+MONGODB_DB = os.environ.get('MONGODB_DB', 'medquiz')
+MONGODB_USERNAME = os.environ.get('MONGODB_USERNAME', '')
+MONGODB_PASSWORD = os.environ.get('MONGODB_PASSWORD', '')
+
+# Connect to MongoDB
+if MONGODB_USERNAME and MONGODB_PASSWORD:
+    connect(
+        db=MONGODB_DB,
+        host=MONGODB_HOST,
+        port=MONGODB_PORT,
+        username=MONGODB_USERNAME,
+        password=MONGODB_PASSWORD,
+        authentication_source='admin'
+    )
+else:
+    connect(db=MONGODB_DB, host=MONGODB_HOST, port=MONGODB_PORT)
+
+# Initialize login manager
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
 CORS(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        return User.objects(id=user_id).first()
+    except:
+        return None
 
 class MedicalQuestionAPI:
     def __init__(self):
@@ -213,10 +251,6 @@ class MedicalQuestionAPI:
 # Initialize the API
 question_api = MedicalQuestionAPI()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
 @app.route('/api/generate-questions', methods=['POST'])
 def generate_questions():
     try:
@@ -304,6 +338,9 @@ def download_pdf():
         results = data.get('results')
         if not results:
             return jsonify({'error': 'Results data is required'}), 400
+        
+        student_name = results.get('studentName', 'Student')
+        
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter)
         styles = getSampleStyleSheet()
@@ -312,6 +349,15 @@ def download_pdf():
             'CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=30, alignment=1
         )
         story.append(Paragraph("Medical Question Test Results", title_style))
+        story.append(Spacer(1, 10))
+        
+        # Add student name prominently
+        student_style = ParagraphStyle(
+            'StudentName', parent=styles['Heading2'], fontSize=14, spaceAfter=20, alignment=1, textColor=colors.HexColor('#2c3e50')
+        )
+        story.append(Paragraph(f"<b>Student:</b> {student_name}", student_style))
+        story.append(Spacer(1, 10))
+        
         info_data = [
             ['Test Date:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
             ['Topic:', results.get('topic', 'N/A')],
@@ -347,16 +393,177 @@ def download_pdf():
             story.append(Spacer(1, 15))
         doc.build(story)
         buffer.seek(0)
+        
+        # Create filename with student name
+        safe_name = "".join(c for c in student_name if c.isalnum() or c in (' ', '_')).replace(' ', '_')
+        filename = f'{safe_name}_medical_test_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+        
         return send_file(
             buffer,
             as_attachment=True,
-            download_name=f'medical_test_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf',
+            download_name=filename,
             mimetype='application/pdf'
         )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+# ======================== AUTHENTICATION ROUTES ========================
+
+@app.route('/auth/login', methods=['POST'])
+def auth_login():
+    """Handle user login"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
+        
+        if not username or not password:
+            return jsonify({'message': 'Username and password are required'}), 400
+        
+        user = User.objects(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            user.last_login = datetime.utcnow()
+            user.save()
+            return jsonify({'message': 'Login successful'}), 200
+        else:
+            return jsonify({'message': 'Invalid username or password'}), 401
+    except Exception as e:
+        return jsonify({'message': f'Login error: {str(e)}'}), 500
+
+
+@app.route('/auth/register', methods=['POST'])
+def auth_register():
+    """Handle user registration"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+        
+        if not username or not email or not password:
+            return jsonify({'message': 'All fields are required'}), 400
+        
+        if len(username) < 3:
+            return jsonify({'message': 'Username must be at least 3 characters'}), 400
+        
+        if len(password) < 6:
+            return jsonify({'message': 'Password must be at least 6 characters'}), 400
+        
+        if User.objects(username=username).first():
+            return jsonify({'message': 'Username already exists'}), 400
+        
+        if User.objects(email=email).first():
+            return jsonify({'message': 'Email already registered'}), 400
+        
+        # Create new user
+        new_user = User(username=username, email=email)
+        new_user.set_password(password)
+        new_user.save()
+        
+        # Log the user in
+        login_user(new_user)
+        
+        return jsonify({'message': 'Registration successful'}), 201
+    except Exception as e:
+        return jsonify({'message': f'Registration error: {str(e)}'}), 500
+
+
+@app.route('/auth/logout', methods=['POST'])
+@login_required
+def auth_logout():
+    """Handle user logout"""
+    logout_user()
+    return jsonify({'message': 'Logged out successfully'}), 200
+
+
+@app.route('/auth/user', methods=['GET'])
+@login_required
+def get_user():
+    """Get current user info"""
+    return jsonify({
+        'id': current_user.id,
+        'username': current_user.username,
+        'email': current_user.email,
+        'created_at': current_user.created_at.isoformat()
+    }), 200
+
+
+# ======================== PAGE ROUTES ========================
+
+@app.route('/login', methods=['GET'])
+def login():
+    """Render login page"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    return render_template('login.html')
+
+
+@app.route('/dashboard', methods=['GET'])
+@login_required
+def dashboard():
+    """Render main dashboard (previously index)"""
+    return render_template('dashboard.html')
+
+
+@app.route('/', methods=['GET'])
+def index():
+    """Redirect to login or dashboard based on auth status"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
+
+
+# ======================== TEST RESULTS STORAGE ========================
+
+@app.route('/api/save-test-result', methods=['POST'])
+@login_required
+def save_test_result():
+    """Save test results to database"""
+    try:
+        data = request.get_json()
+        
+        test_result = TestResult(
+            user=current_user,
+            topic=data.get('topic', 'Unknown'),
+            num_questions=data.get('num_questions', 0),
+            score=data.get('score', 0),
+            total_questions=data.get('total_questions', 0),
+            answers=data.get('answers', {}),
+            generated_questions=data.get('generated_questions', [])
+        )
+        
+        test_result.save()
+        
+        return jsonify({'message': 'Test result saved successfully', 'id': str(test_result.id)}), 201
+    except Exception as e:
+        return jsonify({'message': f'Error saving test result: {str(e)}'}), 500
+
+
+@app.route('/api/user-test-results', methods=['GET'])
+@login_required
+def get_user_test_results():
+    """Get all test results for current user"""
+    try:
+        results = TestResult.objects(user=current_user).order_by('-created_at')
+        
+        return jsonify({
+            'results': [{
+                'id': str(r.id),
+                'topic': r.topic,
+                'score': r.score,
+                'total_questions': r.total_questions,
+                'created_at': r.created_at.isoformat()
+            } for r in results]
+        }), 200
+    except Exception as e:
+        return jsonify({'message': f'Error retrieving results: {str(e)}'}), 500
+
+
 if __name__ == '__main__':
+
     print("  Starting Medical Question Generator API...")
     print("  ML Models Status:")
     print(f"   Voting Ensemble: {' Loaded' if question_api.voting_model else ' Not loaded'}")

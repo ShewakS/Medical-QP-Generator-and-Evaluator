@@ -3,11 +3,20 @@ import sys
 from pathlib import Path
 
 def check_requirements():
-    required_packages = ['flask', 'flask_cors', 'pandas', 'numpy', 'sklearn']
+    required_packages = ['flask', 'flask_cors', 'flask_sqlalchemy', 'flask_login', 'pandas', 'numpy', 'sklearn', 'werkzeug']
     missing_packages = []
     for package in required_packages:
+        # Handle special cases for package imports
+        import_name = package
+        if package == 'sklearn':
+            import_name = 'sklearn'
+        elif package == 'flask_sqlalchemy':
+            import_name = 'flask_sqlalchemy'
+        elif package == 'flask_login':
+            import_name = 'flask_login'
+        
         try:
-            __import__(package)
+            __import__(import_name)
         except ImportError:
             missing_packages.append(package)
     if missing_packages:
@@ -15,7 +24,7 @@ def check_requirements():
         for package in missing_packages:
             print(f"   - {package}")
         print("\n Install missing packages with:")
-        print("   pip install -r requirements_api.txt")
+        print("   pip install -r requirements.txt")
         return False
     return True
 

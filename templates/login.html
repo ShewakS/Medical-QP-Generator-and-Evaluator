@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SmartAI MedQuiz</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #CFE8FC;
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            padding: 40px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-header h1 {
+            color: #333;
+            margin: 0;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .auth-header h1 i {
+            color: #ffd700;
+        }
+
+        .auth-header p {
+            color: #666;
+            margin: 10px 0 0 0;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px 24px;
+            background: #2E8B57;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 139, 87, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-error {
+            background: #fee;
+            color: #c00;
+            border: 1px solid #fcc;
+        }
+
+        .alert-success {
+            background: #efe;
+            color: #0c0;
+            border: 1px solid #cfc;
+        }
+
+        .toggle-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .toggle-link a {
+            color: #2193B0;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .toggle-link a:hover {
+            text-decoration: underline;
+        }
+
+        .form-hidden {
+            display: none;
+        }
+
+        .loading {
+            display: none;
+        }
+
+        .loading.show {
+            display: inline-block;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <!-- Login Form -->
+            <div id="login-form" class="auth-form">
+                <div class="auth-header">
+                    <h1><i class="fas fa-stethoscope"></i> SmartAI MedQuiz</h1>
+                    <p>Sign in to your account</p>
+                </div>
+
+                <div id="login-alert" class="alert form-hidden"></div>
+
+                <form id="login-submit">
+                    <div class="form-group">
+                        <label for="login-username">
+                            <i class="fas fa-user"></i> Username
+                        </label>
+                        <input type="text" id="login-username" name="username" required placeholder="Enter your username">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="login-password">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <input type="password" id="login-password" name="password" required placeholder="Enter your password">
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <span class="loading"></span>Sign In
+                    </button>
+                </form>
+
+                <div class="toggle-link">
+                    Don't have an account? <a onclick="toggleForms()">Register here</a>
+                </div>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form" class="auth-form form-hidden">
+                <div class="auth-header">
+                    <h1><i class="fas fa-stethoscope"></i> SmartAI MedQuiz</h1>
+                    <p>Create a new account</p>
+                </div>
+
+                <div id="register-alert" class="alert form-hidden"></div>
+
+                <form id="register-submit">
+                    <div class="form-group">
+                        <label for="register-username">
+                            <i class="fas fa-user"></i> Username
+                        </label>
+                        <input type="text" id="register-username" name="username" required placeholder="Choose a username" minlength="3">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="register-email">
+                            <i class="fas fa-envelope"></i> Email
+                        </label>
+                        <input type="email" id="register-email" name="email" required placeholder="Enter your email">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="register-password">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <input type="password" id="register-password" name="password" required placeholder="Create a password" minlength="6">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="register-confirm">
+                            <i class="fas fa-lock"></i> Confirm Password
+                        </label>
+                        <input type="password" id="register-confirm" name="confirm_password" required placeholder="Confirm your password">
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <span class="loading"></span>Create Account
+                    </button>
+                </form>
+
+                <div class="toggle-link">
+                    Already have an account? <a onclick="toggleForms()">Sign in here</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleForms() {
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            
+            loginForm.classList.toggle('form-hidden');
+            registerForm.classList.toggle('form-hidden');
+            
+            // Clear alerts
+            document.getElementById('login-alert').classList.add('form-hidden');
+            document.getElementById('register-alert').classList.add('form-hidden');
+        }
+
+        function showAlert(formType, message, isError = true) {
+            const alertId = `${formType}-alert`;
+            const alertElement = document.getElementById(alertId);
+            alertElement.textContent = message;
+            alertElement.className = `alert ${isError ? 'alert-error' : 'alert-success'} form-hidden`;
+            void alertElement.offsetWidth; // Trigger reflow
+            alertElement.classList.remove('form-hidden');
+        }
+
+        function setLoading(formType, loading) {
+            const form = document.getElementById(`${formType}-submit`);
+            const button = form.querySelector('button');
+            const loadingSpan = button.querySelector('.loading');
+            
+            button.disabled = loading;
+            if (loading) {
+                loadingSpan.classList.add('show');
+                loadingSpan.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            } else {
+                loadingSpan.classList.remove('show');
+            }
+        }
+
+        document.getElementById('login-submit').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            
+            setLoading('login', true);
+            
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert('login', 'Login successful! Redirecting...', false);
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1500);
+                } else {
+                    showAlert('login', data.message || 'Login failed. Please try again.', true);
+                }
+            } catch (error) {
+                showAlert('login', 'An error occurred. Please try again.', true);
+                console.error('Error:', error);
+            } finally {
+                setLoading('login', false);
+            }
+        });
+
+        document.getElementById('register-submit').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-confirm').value;
+            
+            if (password !== confirmPassword) {
+                showAlert('register', 'Passwords do not match!', true);
+                return;
+            }
+            
+            setLoading('register', true);
+            
+            try {
+                const response = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert('register', 'Account created successfully! Signing you in...', false);
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1500);
+                } else {
+                    showAlert('register', data.message || 'Registration failed. Please try again.', true);
+                }
+            } catch (error) {
+                showAlert('register', 'An error occurred. Please try again.', true);
+                console.error('Error:', error);
+            } finally {
+                setLoading('register', false);
+            }
+        });
+    </script>
+</body>
+</html>

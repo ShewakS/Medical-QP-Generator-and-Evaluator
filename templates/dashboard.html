@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartAI MedQuiz - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #333;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-stethoscope"></i> SmartAI MedQuiz</h1>
+                <p>AI-Powered Medical Question Generation with Smart Evaluation</p>
+            </div>
+            <div class="user-menu">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <span id="username-display">User</span>
+                </div>
+                <button class="logout-btn" onclick="handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </header>
+        <main class="main-content">
+            <section id="generation-section" class="section active">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-brain"></i>
+                        <h2>Generate Medical Questions</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="question-form">
+                            <div class="form-group">
+                                <label for="topic-select">
+                                    <i class="fas fa-book-medical"></i>
+                                    Select Medical Topic
+                                </label>
+                                <select id="topic-select" required>
+                                    <option value="">Choose a topic...</option>
+                                    <option value="anatomy">Anatomy</option>
+                                    <option value="physiology">Physiology</option>
+                                    <option value="pathology">Pathology</option>
+                                    <option value="pharmacology">Pharmacology</option>
+                                    <option value="microbiology">Microbiology</option>
+                                    <option value="biochemistry">Biochemistry</option>
+                                    <option value="medicine">Internal Medicine</option>
+                                    <option value="surgery">Surgery</option>
+                                    <option value="pediatrics">Pediatrics</option>
+                                    <option value="gynecology">Gynecology</option>
+                                    <option value="psychiatry">Psychiatry</option>
+                                    <option value="radiology">Radiology</option>
+                                    <option value="cardiology">Cardiology</option>
+                                    <option value="neurology">Neurology</option>
+                                    <option value="dermatology">Dermatology</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="question-count">
+                                    <i class="fas fa-hashtag"></i>
+                                    Number of Questions
+                                </label>
+                                <input type="number" id="question-count" min="1" max="20" value="5" required>
+                                <small>Generate 1-20 questions</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="difficulty-level">
+                                    <i class="fas fa-chart-line"></i>
+                                    Difficulty Level
+                                </label>
+                                <select id="difficulty-level" required>
+                                    <option value="easy">Easy</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="hard">Hard</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-magic"></i>
+                                Generate Questions
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <section id="questions-section" class="section">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-question-circle"></i>
+                        <h2>Answer the Questions</h2>
+                        <div class="timer">
+                            <i class="fas fa-clock"></i>
+                            <span id="timer-display">00:00</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="questions-container"></div>
+                        <div class="question-navigation">
+                            <button id="prev-btn" class="btn btn-secondary" disabled>
+                                <i class="fas fa-chevron-left"></i>
+                                Previous
+                            </button>
+                            <span id="question-counter">Question 1 of 5</span>
+                            <button id="next-btn" class="btn btn-secondary">
+                                Next
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            <button id="submit-btn" class="btn btn-success" style="display: none;">
+                                <i class="fas fa-check"></i>
+                                Submit Test
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="results-section" class="section">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-pie"></i>
+                        <h2>Evaluation Results</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="results-container">
+                            <div class="score-display">
+                                <div class="score-circle">
+                                    <span id="score-percentage">0%</span>
+                                </div>
+                                <h3 id="score-text">Your Score</h3>
+                            </div>
+                            
+                            <div class="results-stats">
+                                <div class="stat-item">
+                                    <i class="fas fa-book-medical text-info"></i>
+                                    <span>Topic: <strong id="test-topic">-</strong></span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-chart-line text-info"></i>
+                                    <span>Difficulty: <strong id="test-difficulty">-</strong></span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    <span>Correct: <strong id="correct-count">0</strong></span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-times-circle text-danger"></i>
+                                    <span>Incorrect: <strong id="incorrect-count">0</strong></span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-clock text-info"></i>
+                                    <span>Time Taken: <strong id="time-taken">0:00</strong></span>
+                                </div>
+                            </div>
+
+                            <div class="performance-analysis">
+                                <h4>Performance Analysis</h4>
+                                <div id="analysis-text"></div>
+                            </div>
+
+                            <div class="question-review">
+                                <h4>Question Review</h4>
+                                <div id="review-container"></div>
+                            </div>
+
+                            <div class="student-info-section" style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                                <h4 style="margin-bottom: 15px;"><i class="fas fa-user-graduate"></i> Student Information</h4>
+                                <div class="form-group">
+                                    <label for="student-name" style="font-weight: 600; margin-bottom: 8px; display: block;">
+                                        <i class="fas fa-signature"></i> Student Name (for PDF)
+                                    </label>
+                                    <input type="text" id="student-name" class="form-control" readonly
+                                           style="padding: 10px; border: 2px solid #dee2e6; border-radius: 5px; font-size: 14px; width: 100%; max-width: 400px; background: #e9ecef; cursor: not-allowed;">
+                                    <small style="color: #6c757d; display: block; margin-top: 5px;">Your username will appear on the downloaded PDF certificate</small>
+                                </div>
+                            </div>
+
+                            <div class="action-buttons">
+                                <button id="restart-btn" class="btn btn-primary">
+                                    <i class="fas fa-redo"></i>
+                                    Generate New Questions
+                                </button>
+                                <button id="download-results" class="btn btn-secondary">
+                                    <i class="fas fa-download"></i>
+                                    Download Results
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Generating questions using AI...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load and display user info
+        async function loadUserInfo() {
+            try {
+                const response = await fetch('/auth/user');
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('username-display').textContent = user.username;
+                    // Pre-fill student name with logged-in user's username
+                    if (document.getElementById('student-name')) {
+                        document.getElementById('student-name').value = user.username;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading user info:', error);
+            }
+        }
+
+        // Handle logout
+        async function handleLogout() {
+            try {
+                const response = await fetch('/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Error logging out:', error);
+                window.location.href = '/login';
+            }
+        }
+
+        // Load user info on page load
+        loadUserInfo();
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

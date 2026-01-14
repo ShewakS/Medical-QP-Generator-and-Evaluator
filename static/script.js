@@ -287,7 +287,40 @@ class MedicalQuestionApp {
         this.stopTimer();
         this.calculateResults();
         this.displayResults();
+        this.saveResultsToDatabase();  // Save to database
         this.showSection('results-section');
+    }
+
+    async saveResultsToDatabase() {
+        try {
+            const testData = {
+                topic: this.userAnswers.topic || 'Unknown',
+                num_questions: this.questions.length,
+                score: this.results.percentage,
+                total_questions: this.questions.length,
+                answers: this.userAnswers,
+                generated_questions: this.questions.map(q => ({
+                    question: q.question,
+                    options: [q.opa, q.opb, q.opc, q.opd],
+                    correct: q.correct
+                }))
+            };
+
+            const response = await fetch('/api/save-test-result', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(testData)
+            });
+
+            if (response.ok) {
+                console.log('Test results saved to database');
+            }
+        } catch (error) {
+            console.error('Error saving test results:', error);
+            // Don't block UI if saving fails
+        }
     }
 
     calculateResults() {
@@ -411,7 +444,11 @@ class MedicalQuestionApp {
     }
 
     async downloadResults() {
+        // Get student name from input field (auto-populated with logged-in user's name)
+        const studentName = document.getElementById('student-name')?.value.trim() || 'Student';
+        
         const results = {
+            studentName: studentName,
             timestamp: new Date().toISOString(),
             topic: this.questions[0]?.topic || 'Unknown',
             difficulty: this.questions[0]?.difficulty || 'Unknown',
