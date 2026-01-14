@@ -9,6 +9,7 @@ class User(UserMixin, Document):
     meta = {'collection': 'users'}
     
     username = StringField(required=True, unique=True, max_length=80)
+    name = StringField(max_length=150)  # User's display name
     email = StringField(required=True, unique=True, max_length=120)
     password_hash = StringField(required=True, max_length=255)
     created_at = DateTimeField(default=datetime.utcnow)

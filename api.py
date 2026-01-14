@@ -415,13 +415,13 @@ def auth_login():
     """Handle user login"""
     try:
         data = request.get_json()
-        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
         password = data.get('password', '')
         
-        if not username or not password:
-            return jsonify({'message': 'Username and password are required'}), 400
+        if not email or not password:
+            return jsonify({'message': 'Email and password are required'}), 400
         
-        user = User.objects(username=username).first()
+        user = User.objects(email=email).first()
         
         if user and user.check_password(password):
             login_user(user)
@@ -429,7 +429,7 @@ def auth_login():
             user.save()
             return jsonify({'message': 'Login successful'}), 200
         else:
-            return jsonify({'message': 'Invalid username or password'}), 401
+            return jsonify({'message': 'Invalid email or password'}), 401
     except Exception as e:
         return jsonify({'message': f'Login error: {str(e)}'}), 500
 
@@ -440,6 +440,7 @@ def auth_register():
     try:
         data = request.get_json()
         username = data.get('username', '').strip()
+        name = data.get('name', '').strip()
         email = data.get('email', '').strip()
         password = data.get('password', '')
         
@@ -459,7 +460,7 @@ def auth_register():
             return jsonify({'message': 'Email already registered'}), 400
         
         # Create new user
-        new_user = User(username=username, email=email)
+        new_user = User(username=username, name=name or username, email=email)
         new_user.set_password(password)
         new_user.save()
         
@@ -484,10 +485,10 @@ def auth_logout():
 def get_user():
     """Get current user info"""
     return jsonify({
-        'id': current_user.id,
-        'username': current_user.username,
-        'email': current_user.email,
-        'created_at': current_user.created_at.isoformat()
+        'id': str(current_user.id),
+        'username': str(current_user.username),
+        'name': str(current_user.name or current_user.username),  # Fall back to username if name not set
+        'email': str(current_user.email)
     }), 200
 
 

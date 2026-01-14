@@ -265,10 +265,10 @@
                 const response = await fetch('/auth/user');
                 if (response.ok) {
                     const user = await response.json();
-                    document.getElementById('username-display').textContent = user.username;
-                    // Pre-fill student name with logged-in user's username
+                    document.getElementById('username-display').textContent = user.name || user.username;
+                    // Pre-fill student name with logged-in user's name
                     if (document.getElementById('student-name')) {
-                        document.getElementById('student-name').value = user.username;
+                        document.getElementById('student-name').value = user.name || user.username;
                     }
                 }
             } catch (error) {
